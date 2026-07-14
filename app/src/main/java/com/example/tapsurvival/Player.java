@@ -1,5 +1,7 @@
 package com.example.tapsurvival;
 
+import com.example.tapsurvival.Icon;
+
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -113,13 +115,23 @@ public class Player {
             drawShape(canvas, paint, pos[0] + (size - trailSize)/2f, pos[1] + (size - trailSize)/2f, trailSize);
         }
 
-        // Draw Shield Ring
+        // Draw Shield Ring & Ripple
         if (hasShield) {
             paint.setColor(Color.parseColor("#76FF03"));
             paint.setAlpha(isGhost ? 100 : 255);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(10);
-            canvas.drawCircle(x + size/2f, y + size/2f, size * 0.8f, paint);
+            paint.setStrokeWidth(10.0f);
+            canvas.drawCircle(x + size/2.0f, y + size/2.0f, size * 0.8f, paint);
+            
+            // Animated ripple
+            long now = System.currentTimeMillis();
+            float rippleProgress = (now % 1000) / 1000.0f;
+            float rippleRadius = size * (0.8f + rippleProgress * 0.7f);
+            int rippleAlpha = (int) (150.0f * (1.0f - rippleProgress));
+            paint.setAlpha(isGhost ? rippleAlpha / 2 : rippleAlpha);
+            paint.setStrokeWidth(6.0f);
+            canvas.drawCircle(x + size/2.0f, y + size/2.0f, rippleRadius, paint);
+            
             paint.setStyle(Paint.Style.FILL);
         }
 

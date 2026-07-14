@@ -15,6 +15,7 @@ public class GameView extends SurfaceView implements Runnable {
     private SurfaceHolder surfaceHolder;
     private Paint paint;
     private Canvas canvas;
+    private Paint vignettePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private Player player;
     private GameManager gameManager;
@@ -27,14 +28,24 @@ public class GameView extends SurfaceView implements Runnable {
         super(context);
         surfaceHolder = getHolder();
         paint = new Paint();
+        paint.setAntiAlias(true);
     }
 
     @Override
     public void run() {
         while (isPlaying) {
+            long frameStartTime = System.currentTimeMillis();
             update();
             draw();
-            control();
+            long frameTime = System.currentTimeMillis() - frameStartTime;
+            long sleepTime = 16 - frameTime;
+            if (sleepTime > 0) {
+                try {
+                    Thread.sleep(sleepTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -101,10 +112,10 @@ public class GameView extends SurfaceView implements Runnable {
         if (gameManager != null) {
             for (Obstacle o : gameManager.getObstacles()) {
                 // Only consider obstacles in the same lane for danger vignette
-                if (Math.abs(o.x - player.x) < 50) {
+                if (Math.abs(o.x - player.x) < screenWidth / 4.0f) {
                     float distY = player.y - o.y; // Distance from above
-                    if (distY > 0 && distY < 800) {
-                        intensity = Math.max(intensity, 1.0f - (distY / 800f));
+                    if (distY > 0 && distY < screenHeight * 0.6f) {
+                        intensity = Math.max(intensity, 1.0f - (distY / (screenHeight * 0.6f)));
                     }
                 }
             }
@@ -116,9 +127,9 @@ public class GameView extends SurfaceView implements Runnable {
                 screenWidth/2f, screenHeight/2f, screenHeight/1.2f,
                 new int[]{Color.TRANSPARENT, color},
                 null, android.graphics.Shader.TileMode.CLAMP);
-            Paint vPaint = new Paint();
-            vPaint.setShader(gradient);
-            canvas.drawRect(0, 0, screenWidth, screenHeight, vPaint);
+            vignettePaint.reset();
+            vignettePaint.setShader(gradient);
+            canvas.drawRect(0, 0, screenWidth, screenHeight, vignettePaint);
         }
     }
 
@@ -132,21 +143,29 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     public void pause() {
-        isPlaying = false;
-        if (gameManager != null && gameManager.isPlaying()) {
-            gameManager.pauseGame();
+        this.isPlaying = false;
+        if (this.gameManager != null) {
+            this.gameManager.pauseMusic();
+            if (this.gameManager.isPlaying()) {
+                this.gameManager.pauseGame();
+            }
         }
         try {
-            if (gameThread != null) gameThread.join();
+            if (this.gameThread != null) {
+                this.gameThread.join();
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
     public void resume() {
-        isPlaying = true;
-        gameThread = new Thread(this);
-        gameThread.start();
+        this.isPlaying = true;
+        if (this.gameManager != null) {
+            this.gameManager.resumeMusic();
+        }
+        this.gameThread = new Thread(this);
+        this.gameThread.start();
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.example.tapsurvival;
 
+import com.example.tapsurvival.Icon;
+
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
