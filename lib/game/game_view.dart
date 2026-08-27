@@ -67,9 +67,11 @@ class _GameViewState extends State<GameView> with SingleTickerProviderStateMixin
                 fit: StackFit.expand,
                 children: [
                   // 1. Core 60+ FPS CustomPainter Game Canvas
-                  CustomPaint(
-                    size: Size(constraints.maxWidth, constraints.maxHeight),
-                    painter: GamePainter(controller),
+                  RepaintBoundary(
+                    child: CustomPaint(
+                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                      painter: GamePainter(controller, repaint: _animController),
+                    ),
                   ),
 
                   // 2. In-Game Tap Area (for lane switching & shooting during gameplay)

@@ -99,6 +99,10 @@ class GameController extends ChangeNotifier {
   int shopTab = 0;
   int settingsTab = 0;
 
+  // Lightweight HUD refresh notifier (~10Hz) to prevent full widget tree churn
+  final ValueNotifier<int> hudNotifier = ValueNotifier<int>(0);
+  int _frameCounter = 0;
+
   GameController(this.storage) {
     _loadFromStorage();
   }
@@ -297,7 +301,6 @@ class GameController extends ChangeNotifier {
     if (shakeDuration > 0) shakeDuration--;
 
     if (currentState != GameState.playing) {
-      notifyListeners();
       return;
     }
 
@@ -305,7 +308,6 @@ class GameController extends ChangeNotifier {
     if (countdown > 0) {
       countdown--;
       if (isInitialCountdown) {
-        notifyListeners();
         return;
       }
     }
@@ -533,7 +535,10 @@ class GameController extends ChangeNotifier {
       }
     }
 
-    notifyListeners();
+    _frameCounter++;
+    if (_frameCounter % 6 == 0) {
+      hudNotifier.value = _frameCounter;
+    }
   }
 
   void _levelUp() {
@@ -557,6 +562,7 @@ class GameController extends ChangeNotifier {
     storage.setCurrentLevel(currentLevel);
     storage.setLevelTargetScore(levelTargetScore);
     storage.setLastLevelTargetScore(lastLevelTargetScore);
+    notifyListeners();
   }
 
   void handleTap(Offset position) {
@@ -585,7 +591,6 @@ class GameController extends ChangeNotifier {
       // Normal lane switch
       player.toggleLane();
       _onPlayerToggleLane();
-      notifyListeners();
     }
   }
 
@@ -615,7 +620,6 @@ class GameController extends ChangeNotifier {
       }
       obstacles.clear();
       audio.vibrateHeavy();
-      notifyListeners();
       return;
     }
 
@@ -641,16 +645,21 @@ class GameController extends ChangeNotifier {
     } else {
       audio.vibrateLight();
     }
-    notifyListeners();
   }
 
   void _triggerExplosion(double x, double y, Color color) {
-    for (int i = 0; i < 20; i++) {
+    if (particles.length > 40) {
+      particles.removeRange(0, particles.length - 20);
+    }
+    for (int i = 0; i < 12; i++) {
       particles.add(ParticleItem(x: x, y: y, color: color));
     }
   }
 
   void _triggerCollectEffect(double x, double y, String emoji, Color color) {
+    if (floatingTexts.length > 5) {
+      floatingTexts.removeAt(0);
+    }
     floatingTexts.add(FloatingTextItem(x: x, y: y, text: emoji));
     _triggerExplosion(x, y, color);
   }

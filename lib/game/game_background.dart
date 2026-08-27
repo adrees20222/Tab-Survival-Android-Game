@@ -10,12 +10,20 @@ class GameBackground {
   Color activeSkinColor;
   final Random random = Random();
 
+  // Reusable Paint instances
+  final Paint _bgPaint = Paint()..style = PaintingStyle.fill;
+  final Paint _starPaint = Paint()..style = PaintingStyle.fill;
+  final Paint _linePaint = Paint()
+    ..strokeWidth = 1.5
+    ..style = PaintingStyle.stroke;
+
   GameBackground({
     required this.screenWidth,
     required this.screenHeight,
     this.activeSkinColor = const Color(0xFF1C1B1F),
   }) {
-    for (int i = 0; i < 100; i++) {
+    // 50 stars is optimal for performance and visual density
+    for (int i = 0; i < 50; i++) {
       stars.add(StarItem(screenWidth: screenWidth, screenHeight: screenHeight, random: random));
     }
   }
@@ -39,40 +47,35 @@ class GameBackground {
   }
 
   void draw(Canvas canvas, Size size) {
-    // Fill background skin base
-    final bgPaint = Paint()..color = activeSkinColor;
-    canvas.drawRect(Offset.zero & size, bgPaint);
+    // 1. Fill background skin base
+    _bgPaint.color = activeSkinColor;
+    canvas.drawRect(Offset.zero & size, _bgPaint);
 
-    // Draw stars
-    final starPaint = Paint();
+    // 2. Draw stars
     for (final star in stars) {
-      starPaint.color = star.baseColor.withValues(alpha: star.alpha);
-      canvas.drawCircle(Offset(star.x, star.y), star.size, starPaint);
+      _starPaint.color = star.baseColor.withValues(alpha: star.alpha);
+      canvas.drawCircle(Offset(star.x, star.y), star.size, _starPaint);
     }
 
-    // Grid lines color based on skin
+    // 3. Grid lines color based on skin
     final isMatrix = activeSkinColor.toARGB32() == 0xFF001000 || activeSkinColor.toARGB32() == 0xFF000000;
     final gridColor = isMatrix ? const Color(0xFF39FF14) : const Color(0xFF313033);
 
-    final linePaint = Paint()
-      ..color = gridColor.withValues(alpha: 0.25)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
     // Vertical lane divider lines
+    _linePaint.color = gridColor.withValues(alpha: 0.25);
     final lane1 = size.width / 4;
     final lane2 = 3 * size.width / 4;
     final centerLane = size.width / 2;
 
-    canvas.drawLine(Offset(lane1, 0), Offset(lane1, size.height), linePaint);
-    canvas.drawLine(Offset(lane2, 0), Offset(lane2, size.height), linePaint);
-    canvas.drawLine(Offset(centerLane, 0), Offset(centerLane, size.height), linePaint);
+    canvas.drawLine(Offset(lane1, 0), Offset(lane1, size.height), _linePaint);
+    canvas.drawLine(Offset(lane2, 0), Offset(lane2, size.height), _linePaint);
+    canvas.drawLine(Offset(centerLane, 0), Offset(centerLane, size.height), _linePaint);
 
     // Horizontal moving perspective lines
     for (double y = gridOffset; y < size.height; y += 150) {
       final alphaFactor = (y / size.height).clamp(0.0, 1.0);
-      linePaint.color = gridColor.withValues(alpha: 0.15 * alphaFactor);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+      _linePaint.color = gridColor.withValues(alpha: 0.15 * alphaFactor);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), _linePaint);
     }
   }
 }
