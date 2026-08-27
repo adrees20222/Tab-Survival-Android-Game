@@ -17,8 +17,10 @@ class PlayerEntity {
   ActorIcon currentIcon;
   ThemeColorItem currentTheme;
 
-  final List<Offset> trailPositions = [];
-  static const int maxTrail = 10;
+  static const int maxTrail = 8;
+  final List<double> trailX = List.filled(maxTrail, 0.0);
+  final List<double> trailY = List.filled(maxTrail, 0.0);
+  int trailIndex = 0;
 
   PlayerEntity({
     required this.currentIcon,
@@ -38,10 +40,9 @@ class PlayerEntity {
     targetX = (screenWidth / 4) - (size / 2);
     x = targetX;
     hasShield = false;
-    trailPositions.clear();
-    for (int i = 0; i < maxTrail; i++) {
-      trailPositions.add(Offset(x, y));
-    }
+    trailX.fillRange(0, maxTrail, x);
+    trailY.fillRange(0, maxTrail, y);
+    trailIndex = 0;
   }
 
   void toggleLane() {
@@ -61,11 +62,10 @@ class PlayerEntity {
       x = max(x - speed, targetX);
     }
 
-    // Update trail
-    if (trailPositions.isNotEmpty) {
-      trailPositions.removeLast();
-    }
-    trailPositions.insert(0, Offset(x, y));
+    // Zero-allocation circular buffer trail update
+    trailIndex = (trailIndex + 1) % maxTrail;
+    trailX[trailIndex] = x;
+    trailY[trailIndex] = y;
   }
 
   Rect get collisionRect => Rect.fromLTWH(x, y, size, size);

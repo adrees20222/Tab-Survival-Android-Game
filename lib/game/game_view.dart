@@ -19,19 +19,32 @@ class GameView extends StatefulWidget {
   State<GameView> createState() => _GameViewState();
 }
 
-class _GameViewState extends State<GameView> with SingleTickerProviderStateMixin {
+class _GameViewState extends State<GameView> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animController;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
     )..addListener(_gameLoop);
 
     _animController.repeat();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      if (widget.controller.currentState == GameState.playing) {
+        widget.controller.pauseGame();
+      }
+      _animController.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _animController.repeat();
+    }
   }
 
   void _gameLoop() {
@@ -42,6 +55,7 @@ class _GameViewState extends State<GameView> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animController.removeListener(_gameLoop);
     _animController.dispose();
     super.dispose();

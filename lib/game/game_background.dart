@@ -8,6 +8,7 @@ class GameBackground {
   double screenWidth;
   double screenHeight;
   Color activeSkinColor;
+  Color gridColor;
   final Random random = Random();
 
   // Reusable Paint instances
@@ -21,11 +22,19 @@ class GameBackground {
     required this.screenWidth,
     required this.screenHeight,
     this.activeSkinColor = const Color(0xFF1C1B1F),
-  }) {
+  }) : gridColor = (activeSkinColor.toARGB32() == 0xFF001000 || activeSkinColor.toARGB32() == 0xFF000000)
+            ? const Color(0xFF39FF14)
+            : const Color(0xFF313033) {
     // 50 stars is optimal for performance and visual density
     for (int i = 0; i < 50; i++) {
       stars.add(StarItem(screenWidth: screenWidth, screenHeight: screenHeight, random: random));
     }
+  }
+
+  void updateSkin(Color skinColor) {
+    activeSkinColor = skinColor;
+    final isMatrix = skinColor.toARGB32() == 0xFF001000 || skinColor.toARGB32() == 0xFF000000;
+    gridColor = isMatrix ? const Color(0xFF39FF14) : const Color(0xFF313033);
   }
 
   void update(double gameSpeed) {
@@ -57,11 +66,7 @@ class GameBackground {
       canvas.drawCircle(Offset(star.x, star.y), star.size, _starPaint);
     }
 
-    // 3. Grid lines color based on skin
-    final isMatrix = activeSkinColor.toARGB32() == 0xFF001000 || activeSkinColor.toARGB32() == 0xFF000000;
-    final gridColor = isMatrix ? const Color(0xFF39FF14) : const Color(0xFF313033);
-
-    // Vertical lane divider lines
+    // 3. Vertical lane divider lines
     _linePaint.color = gridColor.withValues(alpha: 0.25);
     final lane1 = size.width / 4;
     final lane2 = 3 * size.width / 4;
@@ -71,7 +76,7 @@ class GameBackground {
     canvas.drawLine(Offset(lane2, 0), Offset(lane2, size.height), _linePaint);
     canvas.drawLine(Offset(centerLane, 0), Offset(centerLane, size.height), _linePaint);
 
-    // Horizontal moving perspective lines
+    // 4. Horizontal moving perspective lines
     for (double y = gridOffset; y < size.height; y += 150) {
       final alphaFactor = (y / size.height).clamp(0.0, 1.0);
       _linePaint.color = gridColor.withValues(alpha: 0.15 * alphaFactor);

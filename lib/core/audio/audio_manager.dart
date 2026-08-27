@@ -8,10 +8,18 @@ class AudioManager {
 
   final AudioPlayer _bgmPlayer = AudioPlayer();
 
-  // Fixed pool of SFX players to prevent MediaPlayer resource exhaustion
-  static const int _sfxPoolSize = 4;
-  final List<AudioPlayer> _sfxPool = [];
-  int _currentSfxIndex = 0;
+  // Dedicated sound players for each distinct sound effect
+  final AudioPlayer _switchPlayer = AudioPlayer();
+  final AudioPlayer _collectPlayer = AudioPlayer();
+  final AudioPlayer _crashPlayer = AudioPlayer();
+  final AudioPlayer _feverPlayer = AudioPlayer();
+  final AudioPlayer _ghostPlayer = AudioPlayer();
+  final AudioPlayer _levelUpPlayer = AudioPlayer();
+  final AudioPlayer _magnetPlayer = AudioPlayer();
+  final AudioPlayer _shieldPlayer = AudioPlayer();
+
+  final Map<String, int> _lastPlayTime = {};
+  static const int _throttleMs = 50;
 
   bool musicEnabled = true;
   bool soundEnabled = true;
@@ -29,7 +37,7 @@ class AudioManager {
     vibrationEnabled = vibration;
 
     try {
-      // Global Audio Context: do not steal focus on SFX, use game audio mode
+      // Global non-focus-stealing game audio context
       AudioPlayer.global.setAudioContext(
         AudioContext(
           android: const AudioContextAndroid(
@@ -50,15 +58,23 @@ class AudioManager {
 
       await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
 
-      // Initialize pre-allocated SFX pool
-      _sfxPool.clear();
-      for (int i = 0; i < _sfxPoolSize; i++) {
-        final player = AudioPlayer();
-        await player.setPlayerMode(PlayerMode.lowLatency);
-        _sfxPool.add(player);
+      final sfxPlayers = [
+        _switchPlayer,
+        _collectPlayer,
+        _crashPlayer,
+        _feverPlayer,
+        _ghostPlayer,
+        _levelUpPlayer,
+        _magnetPlayer,
+        _shieldPlayer,
+      ];
+
+      for (final p in sfxPlayers) {
+        await p.setReleaseMode(ReleaseMode.stop);
+        await p.setPlayerMode(PlayerMode.lowLatency);
       }
     } catch (_) {
-      // Audio initialization fallback
+      // Fallback
     }
   }
 
@@ -111,30 +127,35 @@ class AudioManager {
     }
   }
 
-  void playSfx(String assetPath) {
+  void _safePlay(AudioPlayer player, String path) {
     if (!soundEnabled) return;
-    if (_sfxPool.isEmpty) return;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final lastTime = _lastPlayTime[path] ?? 0;
+    if (now - lastTime < _throttleMs) return;
+    _lastPlayTime[path] = now;
 
     try {
-      final player = _sfxPool[_currentSfxIndex];
-      _currentSfxIndex = (_currentSfxIndex + 1) % _sfxPoolSize;
-
-      player.play(AssetSource(assetPath)).catchError((_) {
-        // Suppress transient audio playback errors silently
-      });
+      if (player.state == PlayerState.playing) {
+        player.stop().then((_) {
+          player.play(AssetSource(path)).catchError((_) {});
+        }).catchError((_) {});
+      } else {
+        player.play(AssetSource(path)).catchError((_) {});
+      }
     } catch (_) {
-      // Ignored
+      // Suppress transient audio error
     }
   }
 
-  void playSwitchLane() => playSfx('audio/switch_lane.wav');
-  void playCollect() => playSfx('audio/collect.wav');
-  void playCrash() => playSfx('audio/crash.wav');
-  void playFever() => playSfx('audio/fever.wav');
-  void playGhost() => playSfx('audio/ghost.wav');
-  void playLevelUp() => playSfx('audio/level_up.wav');
-  void playMagnet() => playSfx('audio/magnet.wav');
-  void playShield() => playSfx('audio/shield.wav');
+  void playSwitchLane() => _safePlay(_switchPlayer, 'audio/switch_lane.wav');
+  void playCollect() => _safePlay(_collectPlayer, 'audio/collect.wav');
+  void playCrash() => _safePlay(_crashPlayer, 'audio/crash.wav');
+  void playFever() => _safePlay(_feverPlayer, 'audio/fever.wav');
+  void playGhost() => _safePlay(_ghostPlayer, 'audio/ghost.wav');
+  void playLevelUp() => _safePlay(_levelUpPlayer, 'audio/level_up.wav');
+  void playMagnet() => _safePlay(_magnetPlayer, 'audio/magnet.wav');
+  void playShield() => _safePlay(_shieldPlayer, 'audio/shield.wav');
 
   // Haptic feedback methods
   void vibrateLight() {
@@ -159,8 +180,13 @@ class AudioManager {
 
   void dispose() {
     _bgmPlayer.dispose();
-    for (final player in _sfxPool) {
-      player.dispose();
-    }
+    _switchPlayer.dispose();
+    _collectPlayer.dispose();
+    _crashPlayer.dispose();
+    _feverPlayer.dispose();
+    _ghostPlayer.dispose();
+    _levelUpPlayer.dispose();
+    _magnetPlayer.dispose();
+    _shieldPlayer.dispose();
   }
 }

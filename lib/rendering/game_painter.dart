@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../game/game_controller.dart';
+import '../game/player_entity.dart';
 import '../models/collectible_item.dart';
 import 'shape_renderer.dart';
 
@@ -194,22 +195,23 @@ class GamePainter extends CustomPainter {
     );
 
     // 2. Trail Pass
-    final int trailLen = player.trailPositions.length;
-    for (int i = 0; i < trailLen; i++) {
-      final pos = player.trailPositions[i];
-      final trailRatio = 1.0 - (i / trailLen);
+    for (int i = 0; i < PlayerEntity.maxTrail; i++) {
+      final int index = (player.trailIndex - i + PlayerEntity.maxTrail) % PlayerEntity.maxTrail;
+      final px = player.trailX[index];
+      final py = player.trailY[index];
+      final trailRatio = 1.0 - (i / PlayerEntity.maxTrail);
       final alpha = (0.5 * trailRatio) * (isGhost ? 0.4 : 1.0);
       _fillPaint.color = themeColor.withValues(alpha: alpha);
 
-      final trailSize = player.size * (1.0 - (i / trailLen) * 0.4);
+      final trailSize = player.size * (1.0 - (i / PlayerEntity.maxTrail) * 0.4);
       final offset = (player.size - trailSize) / 2;
 
       ShapeRenderer.drawShape(
         canvas: canvas,
         paint: _fillPaint,
         type: player.currentIcon.type,
-        x: pos.dx + offset,
-        y: pos.dy + offset,
+        x: px + offset,
+        y: py + offset,
         size: trailSize,
         emoji: player.currentIcon.emoji,
       );

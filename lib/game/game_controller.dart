@@ -433,7 +433,7 @@ class GameController extends ChangeNotifier {
       }
 
       // Collectible collision with player
-      if (player.collisionRect.overlaps(c.collisionRect)) {
+      if (_checkOverlap(player.x, player.y, player.size, c.x, c.y, c.size)) {
         audio.vibrateLight();
         audio.playCollect();
 
@@ -499,7 +499,7 @@ class GameController extends ChangeNotifier {
       o.update();
 
       // Crash check if not in ghost or fever mode
-      if (ghostTimer == 0 && feverTimer == 0 && player.collisionRect.overlaps(o.collisionRect)) {
+      if (ghostTimer == 0 && feverTimer == 0 && _checkOverlap(player.x, player.y, player.size, o.x, o.y, o.size)) {
         if (!player.hasShield) {
           // Game over!
           currentState = GameState.gameOver;
@@ -712,7 +712,7 @@ class GameController extends ChangeNotifier {
   bool buySkin(ThemeColorItem skin) {
     if (skin.unlocked) {
       currentSkin = skin;
-      background.activeSkinColor = skin.color;
+      background.updateSkin(skin.color);
       storage.setCurrentSkinId(skin.id);
       notifyListeners();
       return true;
@@ -720,7 +720,7 @@ class GameController extends ChangeNotifier {
       gems -= skin.price;
       skin.unlocked = true;
       currentSkin = skin;
-      background.activeSkinColor = skin.color;
+      background.updateSkin(skin.color);
 
       final updated = '${storage.unlockedSkins},${skin.id}';
       storage.setUnlockedSkins(updated);
@@ -836,5 +836,9 @@ class GameController extends ChangeNotifier {
       return (random.nextDouble() - 0.5) * 20.0;
     }
     return 0.0;
+  }
+
+  static bool _checkOverlap(double x1, double y1, double s1, double x2, double y2, double s2) {
+    return x1 < x2 + s2 && x1 + s1 > x2 && y1 < y2 + s2 && y1 + s1 > y2;
   }
 }
